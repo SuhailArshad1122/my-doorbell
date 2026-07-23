@@ -13,18 +13,32 @@ jobs:
       id-token: write
       actions: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - uses: anthropics/claude-code-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          track_progress: true
-          prompt: |
-            Review the changes in this pull request for bugs. Be brief:
-            name the bug, say why it is wrong, and stop.
+          node-version: '20'
 
-            Refer to the specific commits in this PR by their short hash when
-            explaining what changed.
+      - name: Install OpenClaw CLI
+        run: npm install -g openclaw
+
+      - name: Run OpenClaw PR Review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set your LLM API key (or OpenClaw Gateway token) here:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
+          # Or ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, etc.
+        run: |
+          # Fetch PR diff
+          PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+
+          # Run OpenClaw agent to review the code
+          REVIEW_OUTPUT=$(openclaw run \
+            --message "Review the following git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash:
+            $PR_DIFF")
+
+          # Post the review comment on the PR
+          gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_OUTPUT"
