@@ -12,8 +12,10 @@ jobs:
       pull-requests: write
       id-token: write
       actions: read
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -28,17 +30,10 @@ jobs:
       - name: Run OpenClaw PR Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Set your LLM API key (or OpenClaw Gateway token) here:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
-          # Or ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, etc.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          # Fetch PR diff
           PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
-
-          # Run OpenClaw agent to review the code
-          REVIEW_OUTPUT=$(openclaw run \
-            --message "Review the following git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash:
-            $PR_DIFF")
-
-          # Post the review comment on the PR
+          
+          REVIEW_OUTPUT=$(openclaw run --message "Review the following git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash: $PR_DIFF")
+          
           gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_OUTPUT"
