@@ -6,25 +6,34 @@ on:
 
 jobs:
   review:
+    name: Doorbell PR Review
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       id-token: write
       actions: read
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - uses: anthropics/claude-code-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          track_progress: true
-          prompt: |
-            Review the changes in this pull request for bugs. Be brief:
-            name the bug, say why it is wrong, and stop.
+          node-version: '20'
 
-            Refer to the specific commits in this PR by their short hash when
-            explaining what changed.
+      - name: Run OpenClaw PR Review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+
+          REVIEW_OUTPUT=$(npx -y openclaw@latest agent --local --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
+
+          $PR_DIFF")
+
+          gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_OUTPUT"
