@@ -25,7 +25,6 @@ jobs:
         with:
           node-version: '24'
 
-
       - name: Run OpenClaw PR Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -33,7 +32,7 @@ jobs:
         run: |
           PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
 
-          REVIEW_OUTPUT=$(npx -y openclaw@latest agent --local --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
+          REVIEW_OUTPUT=$(npx -y openclaw@latest agent --local --model google/gemini-2.5-flash --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
 
           $PR_DIFF")
 
