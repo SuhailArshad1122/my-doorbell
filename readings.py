@@ -12,7 +12,3 @@ def lowest(readings):
     """The lowest altitude in the list..."""
     return min(readings)
 
-
-def lowest(readings):
-    """The lowest altitude in the list..."""
-    return min(readings)
