@@ -11,3 +11,7 @@ def highest(readings):
 def lowest(readings):
     """The lowest altitude in the list..."""
     return min(readings)
+
+def get_first_sensor_value(sensors):
+    # Intentional bug for OpenClaw to find:
+    return sensors[10]
