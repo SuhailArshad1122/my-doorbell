@@ -25,21 +25,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install OpenClaw CLI
-        run: npm install -g openclaw
-
-      - name: Ring Doorbell (Run OpenClaw Review)
+      - name: Run OpenClaw PR Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # Fetch PR diff
           PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
 
-          # Run OpenClaw agent to review the code changes
-          REVIEW_OUTPUT=$(openclaw agent --local --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
+          REVIEW_OUTPUT=$(npx -y openclaw@latest agent --local --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
 
           $PR_DIFF")
 
-          # Post the review comment on the PR
           gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_OUTPUT"
