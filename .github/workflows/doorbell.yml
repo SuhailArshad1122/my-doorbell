@@ -28,12 +28,20 @@ jobs:
       - name: Run OpenClaw PR Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENCLAW_GATEWAY_URL: ${{ secrets.OPENCLAW_GATEWAY_URL }}
+          OPENCLAW_TOKEN: ${{ secrets.OPENCLAW_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
+          PROMPT="Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop: $PR_DIFF"
 
-          REVIEW_OUTPUT=$(npx -y openclaw@latest --log-level error agent --local --session-id "doorbell-pr-${{ github.event.pull_request.number }}" --model google/gemini-2.5-flash --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
-
-          $PR_DIFF")
+          # Check if local OpenClaw Gateway is online via Tailscale Funnel
+          if [ -n "$OPENCLAW_GATEWAY_URL" ] && npx -y openclaw@latest health --url "$OPENCLAW_GATEWAY_URL" --timeout 5 >/dev/null 2>&1; then
+            echo "✅ Local OpenClaw is ONLINE! Routing review to local OpenClaw UI..."
+            REVIEW_OUTPUT=$(npx -y openclaw@latest --log-level error agent --url "$OPENCLAW_GATEWAY_URL" --token "$OPENCLAW_TOKEN" --session-id "doorbell-pr-${{ github.event.pull_request.number }}" --message "$PROMPT")
+          else
+            echo "⚠️ Local OpenClaw is OFFLINE. Using cloud runner fallback..."
+            REVIEW_OUTPUT=$(npx -y openclaw@latest --log-level error agent --local --session-id "doorbell-pr-${{ github.event.pull_request.number }}" --model google/gemini-2.5-flash --message "$PROMPT")
+          fi
 
           gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_OUTPUT"
