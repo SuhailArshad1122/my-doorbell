@@ -28,28 +28,18 @@ jobs:
       - name: Install OpenClaw CLI
         run: npm install -g openclaw
 
-      - name: Ring Doorbell (Run PR Review)
+      - name: Ring Doorbell (Run OpenClaw Review)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENCLAW_GATEWAY_URL: ${{ secrets.OPENCLAW_GATEWAY_URL }}
-          OPENCLAW_TOKEN: ${{ secrets.OPENCLAW_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Fallback key when local PC is OFF
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          # Fetch PR diff
           PR_DIFF=$(gh pr diff ${{ github.event.pull_request.number }})
-          PROMPT="Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash:
 
-          $PR_DIFF"
+          # Run OpenClaw agent to review the code changes
+          REVIEW_OUTPUT=$(openclaw agent --local --message "Review the following PR git diff for bugs. Be brief: name the bug, say why it is wrong, and stop. Refer to specific commits by short hash when explaining what changed:
 
-          echo "🔔 Doorbell rung! Checking if local OpenClaw Gateway is online..."
+          $PR_DIFF")
 
-          # Try connecting to local OpenClaw Gateway first
-          if [ -n "$OPENCLAW_GATEWAY_URL" ] && openclaw health --url "$OPENCLAW_GATEWAY_URL" --timeout 5 >/dev/null 2>&1; then
-            echo "✅ Local OpenClaw is ONLINE! Routing review to local NemoClaw..."
-            REVIEW_OUTPUT=$(openclaw agent --url "$OPENCLAW_GATEWAY_URL" --token "$OPENCLAW_TOKEN" --message "$PROMPT")
-          else
-            echo "⚠️ Local OpenClaw is OFFLINE (PC switched off). Falling back to OpenClaw runner..."
-            REVIEW_OUTPUT=$(openclaw agent --local --message "$PROMPT")
-          fi
-
-          # Post the review comment back to the PR
+          # Post the review comment on the PR
           gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_OUTPUT"
